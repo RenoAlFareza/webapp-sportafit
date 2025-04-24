@@ -12,6 +12,10 @@ export default function PaymentSuccess() {
     navigate("/");
   };
 
+  const handleBackToTransactions = () => {
+    navigate("/transaksi");
+  };
+
   // Fungsi untuk menangani klik tombol cetak bukti pembayaran
   const handlePrintReceipt = () => {
     window.print();
@@ -61,7 +65,7 @@ export default function PaymentSuccess() {
         {/* Buttons */}
         <div className="w-full flex flex-col gap-3">
           <button
-            onClick={handleBackToHome}
+            onClick={handleBackToTransactions}
             className="w-full py-3 bg-sporta-blue text-white font-semibold rounded-lg hover:bg-blue-700 transition"
           >
             Lanjutkan

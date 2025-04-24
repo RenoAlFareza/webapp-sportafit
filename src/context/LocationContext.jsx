@@ -1,11 +1,9 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 
-// 1. Buat context
 const LocationContext = createContext();
 
-// 2. Buat provider
 export function LocationProvider({ children }) {
-  const [location, setLocation] = useState("SURABAYA");
+  const [location, setLocation] = useState("SURABAYA"); // default misal
 
   return (
     <LocationContext.Provider value={{ location, setLocation }}>
@@ -14,7 +12,6 @@ export function LocationProvider({ children }) {
   );
 }
 
-// 3. Buat hook custom agar gampang dipakai
 export function useLocation() {
   return useContext(LocationContext);
 }

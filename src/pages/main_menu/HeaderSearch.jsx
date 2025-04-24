@@ -1,11 +1,12 @@
-
 import { FiSearch } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
 import { IoChevronDownSharp } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "../../context/LocationContext"; // ⬅️ Tambahkan ini
 
 function HeaderSearch() {
   const navigate = useNavigate();
+  const { location } = useLocation(); // ⬅️ Ambil lokasi dari context
 
   return (
     <div className="w-full max-w-[434px] bg-white font-jakarta overflow-hidden">
@@ -54,7 +55,8 @@ function HeaderSearch() {
                 d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
               />
             </svg>
-            <span>SURABAYA</span>
+            {/* GANTI DENGAN CONTEXT */}
+            <span>{location}</span>
           </div>
           <IoChevronDownSharp size={16} className="text-gray-500" />
         </div>

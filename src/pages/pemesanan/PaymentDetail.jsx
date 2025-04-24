@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { PaymentContext } from "../../context/PaymentContext";
+import danaLogo from "/dana2.png"; // Tambahkan import untuk logo DANA
 
 const mockBooking = {
   arenaName:  "Zuper Badminton Keputih",
@@ -101,7 +102,7 @@ export default function PaymentDetail() {
           onClick={() => setExpanded(v => !v)}
         >
           {method
-            ? `${method.name} • Rp${method.balance.toLocaleString()}`
+            ? `${method.name} - Rp${method.balance.toLocaleString()}`
             : "Pilih Metode Pembayaran"}
           {expanded ? <FiChevronUp /> : <FiChevronDown />}
         </button>
@@ -126,7 +127,7 @@ export default function PaymentDetail() {
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <img src={pm.icon} alt={pm.name} className="w-6 h-6" />
+                    <img src={pm.name === "DANA" ? danaLogo : pm.icon} alt={pm.name} className="w-6 h-6" />
                     <span className="text-sm">{pm.name}</span>
                   </div>
                   <span className="text-xs">
