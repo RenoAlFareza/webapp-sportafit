@@ -9,6 +9,11 @@ import ForgotPassword          from "./pages/login_section/ForgotPassword";
 import Verification            from "./pages/login_section/Verification";
 import NewPassword             from "./pages/login_section/NewPassword";
 import Done                    from "./pages/login_section/Done";
+import SocialAuthSuccess       from "./pages/login_section/SocialAuthSuccess";
+
+// Auth pages with backend integration
+import AuthLogin               from "./pages/auth/Login";
+import DemoLogin               from "./pages/auth/DemoLogin";
 
 import Home                    from "./pages/main_menu/Home";
 import LocationSelector        from "./pages/main_menu/LocationSelector";
@@ -17,6 +22,7 @@ import Profil1                 from "./pages/profile/Profil1";
 import EditProfil1             from "./pages/profile/EditProfil1";
 import Voucher1                from "./pages/profile/Voucher1";
 import Voucher2                from "./pages/profile/Voucher2";
+import MyVoucher               from "./pages/profile/MyVoucher";
 import Voucher_SK              from "./pages/profile/Voucher_SK";
 import Voucher_CP              from "./pages/profile/Voucher_CP";
 import Voucher_Info            from "./pages/profile/Voucher_Info";
@@ -40,12 +46,17 @@ import DetailTransactionFailed from "./pages/transaksi/DetailTransactionFailed";
 import Invoice                 from "./pages/transaksi/Invoice";
 import InvoiceFailed           from "./pages/transaksi/InvoiceFailed";
 
+// Debug pages
+import DebugTransactions       from "./pages/debug/DebugTransactions";
+
 function App() {
   return (
     <Routes>
       {/* -------- Auth & Onboarding -------- */}
       <Route path="/"                element={<Home />} />
       <Route path="/login"           element={<Login />} />
+      <Route path="/auth/login"      element={<AuthLogin />} />
+      <Route path="/demo-login"       element={<DemoLogin />} />
       <Route path="/register"        element={<Register />} />
       <Route path="/personaldata"    element={<Personaldata />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -53,15 +64,18 @@ function App() {
       <Route path="/new-password"    element={<NewPassword />} />
       <Route path="/done"            element={<Done />} />
       <Route path="/home"            element={<Home />} />
+      <Route path="/social-auth-success" element={<SocialAuthSuccess />} />
 
       {/* -------- Main Menu -------- */}
       <Route path="/lokasi" element={<LocationSelector />} />
 
       {/* -------- Profile -------- */}
+      <Route path="/profil"            element={<Profil1 />} />
       <Route path="/profil1"           element={<Profil1 />} />
       <Route path="/edit-profil"       element={<EditProfil1 />} />
       <Route path="/voucher"           element={<Voucher1 />} />
       <Route path="/voucher/:id"       element={<Voucher2 />} />
+      <Route path="/my-voucher"        element={<MyVoucher />} />
       <Route path="/voucher-sk"        element={<Voucher_SK />} />
       <Route path="/voucher-cp"        element={<Voucher_CP />} />
       <Route path="/voucher-info"      element={<Voucher_Info />} />
@@ -86,6 +100,9 @@ function App() {
       <Route path="/transaksi/failed/:id"  element={<DetailTransactionFailed />} />
       <Route path="/invoice/:id"           element={<Invoice />} />
       <Route path="/invoice-failed/:id"    element={<InvoiceFailed />} />
+
+      {/* -------- Debug Routes -------- */}
+      <Route path="/debug/transactions"    element={<DebugTransactions />} />
     </Routes>
   );
 }

@@ -1,50 +1,35 @@
 // src/pages/transaksi/Transactions.jsx
 
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
 import BottomNavbar from "../main_menu/BottomNavbar";
+import { getTransactions } from "../../services/bookingHistoryService";
 
-const mockTransactions = [
-  {
-    id: "INV-250406-ELSJXUC52-46",
-    date: "Minggu, 06 April 2025",
-    time: "20:00",
-    total: 185000,
-    items: 1,
-    venue: "BADMINTON ZUPER KEPUTIH, SURABAYA",
-    status: "Berhasil",
-  },
-  {
-    id: "INV-250407-EKKXJUC52-49",
-    date: "Senin, 07 April 2025",
-    time: "19:00",
-    total: 75000,
-    items: 1,
-    venue: "BADMINTON ZUPER DHARMAHUSADA, SURABAYA",
-    status: "Berhasil",
-  },
-  {
-    id: "INV-250408-ELKIDWAC52-26",
-    date: "Selasa, 08 April 2025",
-    time: "17:00",
-    total: 500000,
-    items: 1,
-    venue: "BASKET BABATAN, SURABAYA",
-    status: "Gagal",
-  },
-  {
-    id: "INV-250409-ESDRTJC52-76",
-    date: "Minggu, 06 April 2025",
-    time: "21:00",
-    total: 305000,
-    items: 1,
-    venue: "JJ POOL BILLIARD MERR, SURABAYA",
-    status: "Berhasil",
-  },
-];
+// Tidak ada lagi fallback data, hanya menampilkan transaksi user
 
 export default function Transactions() {
   const navigate = useNavigate();
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Ambil data transaksi dari localStorage
+  useEffect(() => {
+    try {
+      // Ambil semua transaksi
+      const allTransactions = getTransactions();
+      console.log('Transactions in Transactions.jsx:', allTransactions);
+
+      // Tampilkan transaksi dari localStorage
+      setTransactions(allTransactions || []);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      // Jika terjadi error, tampilkan array kosong
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-24 font-jakarta">
@@ -64,19 +49,28 @@ export default function Transactions() {
 
       {/* Scrollable Content */}
       <div className="pt-24 max-w-[434px] mx-auto px-4 space-y-4">
-        {mockTransactions.map((tx) => {
-          const success = tx.status === "Berhasil";
-          return (
-            <div
-              key={tx.id}
-              onClick={() => navigate(success ? `/transaksi/success/${tx.id}` : `/transaksi/failed/${tx.id}`)}
-              className={`
-                flex bg-white rounded-2xl shadow
-                border-l-4
-                ${success ? "border-green-500" : "border-red-500"}
-                overflow-hidden cursor-pointer hover:bg-gray-50
-              `}
-            >
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            <p>Tidak ada riwayat transaksi</p>
+          </div>
+        ) : (
+          transactions.map((tx) => {
+            const success = tx.status === "Berhasil";
+            return (
+              <div
+                key={tx.id}
+                onClick={() => navigate(success ? `/transaksi/success/${tx.id}` : `/transaksi/failed/${tx.id}`)}
+                className={`
+                  flex bg-white rounded-2xl shadow
+                  border-l-4
+                  ${success ? "border-green-500" : "border-red-500"}
+                  overflow-hidden cursor-pointer hover:bg-gray-50
+                `}
+              >
               {/* Info utama */}
               <div className="flex-1 px-4 py-3">
                 {/* ID (italic) */}
@@ -85,26 +79,26 @@ export default function Transactions() {
                 </div>
                 {/* Tanggal & jam */}
                 <div className="text-sm font-semibold mb-3">
-                  {tx.date}{" "}
-                  <span className="font-normal">|</span> {tx.time}
+                  {tx.formattedDate || tx.date || "Tanggal tidak tersedia"}{" "}
+                  <span className="font-normal">|</span> {tx.time || "Waktu tidak tersedia"}
                 </div>
                 {/* Definition list */}
                 <dl className="text-sm text-gray-700 space-y-2">
                   <div className="flex">
                     <dt className="w-20 font-medium">Total</dt>
                     <dd className="flex-1 font-semibold">
-                      Rp{tx.total.toLocaleString()}
+                      Rp{(tx.total || tx.totalPrice || 0).toLocaleString()}
                     </dd>
                   </div>
                   <div className="flex">
                     <dt className="w-20 font-medium">Jumlah</dt>
                     <dd className="flex-1 font-semibold">
-                      {tx.items} Pesanan
+                      {tx.items || tx.timeSlots?.length || 1} Pesanan
                     </dd>
                   </div>
                   <div>
                     <dt className="block font-medium">Tempat</dt>
-                    <dd className="mt-0.5 font-semibold">{tx.venue}</dd>
+                    <dd className="mt-0.5 font-semibold">{tx.venue || tx.venueSubtitle || tx.arenaName || "Tempat tidak tersedia"}</dd>
                   </div>
                 </dl>
               </div>
@@ -124,7 +118,8 @@ export default function Transactions() {
               </div>
             </div>
           );
-        })}
+          })
+        )}
       </div>
 
       {/* Bottom Navbar */}

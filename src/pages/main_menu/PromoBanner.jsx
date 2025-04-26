@@ -13,28 +13,23 @@ function PromoBanner() {
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % bannerImages.length);
     }, 4000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="w-full max-w-[434px] overflow-hidden font-jakarta">
+    <div className="w-full max-w-[434px] h-[140px] sm:h-[250px] md:h-[300px] overflow-hidden font-jakarta">
       <div
         className="flex transition-transform duration-700 ease-in-out"
         style={{
-          width: `${bannerImages.length * 100}%`,
-          transform: `translateX(-${current * (100 / bannerImages.length)}%)`,
+          transform: `translateX(-${current * 100}%)`,
         }}
       >
         {bannerImages.map((src, i) => (
-          <div
-            key={i}
-            className="w-full max-w-[434px] flex-shrink-0"
-          >
+          <div key={i} className="w-full flex-shrink-0 h-full">
             <img
               src={src}
               alt={`Banner ${i + 1}`}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             />
           </div>
         ))}

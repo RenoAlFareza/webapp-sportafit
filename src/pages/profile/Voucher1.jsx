@@ -1,35 +1,44 @@
 import { useNavigate } from "react-router-dom";
-import { IoArrowBack } from "react-icons/io5";
-
-const vouchers = [
-  {
-    id: 1,
-    title: "Voucher Cashback s/d Rp 20.000",
-    validUntil: "17 Agustus, 2025",
-    imageUrl: "/Voucher1.png"
-  },
-  {
-    id: 2,
-    title: "Pakai QRIS BCA – Cashback Hingga 25%",
-    validUntil: "30 Maret, 2025",
-    imageUrl: "/Voucher2.png"
-  },
-  {
-    id: 3,
-    title: "Voucher Diskon 15% Booking Lapangan",
-    validUntil: "31 Desember, 2025",
-    imageUrl: "/Voucher3.png"
-  },
-  {
-    id: 4,
-    title: "Gratis Sewa Raket Badminton",
-    validUntil: "30 November, 2025",
-    imageUrl: "/Voucher4.png"
-  }
-];
+import { IoArrowBack, IoTicketOutline } from "react-icons/io5";
+import { useState } from "react";
+import { useVoucher } from "../../context/VoucherContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function VoucherPage() {
   const navigate = useNavigate();
+  const { vouchers, userVouchers, loading, error, addVoucherToUser } = useVoucher();
+  const { user } = useAuth();
+  const [voucherCode, setVoucherCode] = useState("");
+  const [addingVoucher, setAddingVoucher] = useState(false);
+  const [addVoucherError, setAddVoucherError] = useState("");
+  const [addVoucherSuccess, setAddVoucherSuccess] = useState("");
+
+  // Fungsi untuk menambahkan voucher
+  const handleAddVoucher = async (e) => {
+    e.preventDefault();
+
+    if (!voucherCode.trim()) {
+      setAddVoucherError("Kode voucher tidak boleh kosong");
+      return;
+    }
+
+    try {
+      setAddingVoucher(true);
+      setAddVoucherError("");
+      setAddVoucherSuccess("");
+
+      // Panggil fungsi addVoucherToUser dari VoucherContext
+      const result = await addVoucherToUser(voucherCode);
+
+      setAddVoucherSuccess(result.message || "Voucher berhasil ditambahkan");
+      setVoucherCode("");
+    } catch (err) {
+      console.error("Error adding voucher:", err);
+      setAddVoucherError(err.message || "Gagal menambahkan voucher");
+    } finally {
+      setAddingVoucher(false);
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] bg-[#F9FAFB] flex flex-col items-center px-4 py-6">
@@ -43,15 +52,78 @@ export default function VoucherPage() {
           <div className="w-6" />
         </div>
 
+        {/* Add Voucher Form */}
+        <div className="px-4 py-4 bg-white border-b">
+          <form onSubmit={handleAddVoucher} className="flex flex-col space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700">Tambah Voucher</h3>
+
+            {/* Error Message */}
+            {addVoucherError && (
+              <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                {addVoucherError}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {addVoucherSuccess && (
+              <div className="p-3 bg-green-50 text-green-700 rounded-lg text-sm">
+                {addVoucherSuccess}
+              </div>
+            )}
+
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={voucherCode}
+                onChange={(e) => setVoucherCode(e.target.value)}
+                placeholder="Masukkan kode voucher"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sporta-blue"
+              />
+              <button
+                type="submit"
+                disabled={addingVoucher}
+                className={`px-4 py-2 bg-sporta-blue text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors ${
+                  addingVoucher ? "opacity-70 cursor-not-allowed" : ""
+                }`}
+              >
+                {addingVoucher ? "Menambahkan..." : "Tambah"}
+              </button>
+            </div>
+          </form>
+        </div>
+
         {/* Category Tabs - only Badminton */}
-        <div className="flex px-4 py-3 overflow-x-auto bg-white space-x-2">
+        <div className="flex px-4 py-3 overflow-x-auto bg-white space-x-2 border-b">
           <button className="px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-800">
             Badminton
           </button>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="p-4 flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sporta-blue"></div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="p-4">
+            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          </div>
+        )}
+
         {/* Voucher Cards */}
         <div className="p-4 space-y-4">
+          {!loading && vouchers.length === 0 && (
+            <div className="p-4 text-center text-gray-500">
+              <IoTicketOutline size={48} className="mx-auto mb-2 text-gray-400" />
+              <p>Tidak ada voucher tersedia</p>
+            </div>
+          )}
+
           {vouchers.map((v) => (
             <div
               key={v.id}
@@ -84,12 +156,23 @@ export default function VoucherPage() {
                   </svg>
                   Berlaku hingga {v.validUntil}
                 </p>
-                <button
-                  onClick={() => navigate(`/voucher/${v.id}`)}
-                  className="mt-2 px-4 py-2 bg-sporta-blue text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Pakai
-                </button>
+
+                {/* Cek apakah user sudah memiliki voucher ini */}
+                {userVouchers.some(uv => uv.id === v.id) ? (
+                  <button
+                    onClick={() => navigate(`/voucher/${v.id}`)}
+                    className="mt-2 px-4 py-2 bg-green-500 text-white rounded-full text-sm font-medium hover:bg-green-600 transition-colors"
+                  >
+                    Lihat Detail
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate(`/voucher/${v.id}`)}
+                    className="mt-2 px-4 py-2 bg-sporta-blue text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Pakai
+                  </button>
+                )}
               </div>
             </div>
           ))}

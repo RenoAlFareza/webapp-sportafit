@@ -1,11 +1,57 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "", remember: false });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // Validasi sederhana
+    if (!form.email || !form.password) {
+      setError("Email dan password wajib diisi.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login gagal");
+      }
+
+      // Simpan data user (tanpa password) di localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
+      // jika ingin pakai JWT: localStorage.setItem("token", data.token);
+
+      // Redirect ke halaman home
+      navigate("/home");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-[#F9FAFB] px-4 py-6">
+    <div className="w-full min-h-screen flex items-center justify-center bg-[#F9FAFB] px-4 py-6">
       <div className="container max-w-sm w-full bg-white rounded-3xl shadow-md overflow-hidden flex flex-col">
 
         {/* Gambar Header */}
@@ -17,28 +63,45 @@ function Login() {
             Selamat Datang!
           </h2>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error && (
+              <div className="text-red-600 text-sm text-center">{error}</div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
               <input
+                name="email"
                 type="email"
                 placeholder="Masukkan Email"
                 className="w-full px-4 py-2 border rounded-lg text-sm"
+                value={form.email}
+                onChange={handleChange}
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Kata Sandi</label>
               <input
+                name="password"
                 type="password"
                 placeholder="Masukkan Kata Sandi"
                 className="w-full px-4 py-2 border rounded-lg text-sm"
+                value={form.password}
+                onChange={handleChange}
+                required
               />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-2 sm:gap-0">
               <label className="flex items-center gap-2">
-                <input type="checkbox" />
+                <input
+                  name="remember"
+                  type="checkbox"
+                  checked={form.remember}
+                  onChange={handleChange}
+                />
                 Ingat Saya
               </label>
               <a
@@ -51,24 +114,26 @@ function Login() {
 
             <button
               type="submit"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/home"); // arahkan ke halaman Home
-              }}
               className="w-full py-2 bg-sporta-blue text-white font-semibold rounded-lg hover:bg-blue-700 transition"
             >
               Masuk
             </button>
-
           </form>
 
           {/* Social Login */}
-          <div className="mt-8 text-center text-sm text-gray-500">Atau masuk dengan</div>
+          <div className="mt-8 text-center text-sm text-gray-500">
+            Atau masuk dengan
+          </div>
           <div className="flex justify-center gap-4 mt-5 mb-4">
-            <img src="/fb.png" alt="Facebook" className="w-6 h-6" />
-            <img src="/google.png" alt="Google" className="w-6 h-6" />
-            <img src="/apple.png" alt="Apple" className="w-6 h-6" />
-            <img src="/x.png" alt="X" className="w-6 h-6" />
+            <a href="/api/auth/google" className="social-login-button">
+              <img src="/google.png" alt="Google" className="w-6 h-6 cursor-pointer" />
+            </a>
+            <a href="/api/auth/facebook" className="social-login-button">
+              <img src="/fb.png" alt="Facebook" className="w-6 h-6 cursor-pointer" />
+            </a>
+            <a href="/api/auth/twitter" className="social-login-button">
+              <img src="/x.png" alt="X" className="w-6 h-6 cursor-pointer" />
+            </a>
           </div>
 
           {/* Footer */}

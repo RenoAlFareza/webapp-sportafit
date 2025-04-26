@@ -1,17 +1,20 @@
 // src/pages/pemesanan/InvoiceFailed.jsx
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
 import logo from "/Logo.png"; // sesuaikan path
+import { getBookingById } from "../../services/bookingHistoryService";
 
 export default function InvoiceFailed() {
   const navigate = useNavigate();
   const { id } = useParams();
   const invoiceRef = useRef();
+  const [loading, setLoading] = useState(true);
+  const [transaction, setTransaction] = useState(null);
 
-  // Mock data untuk versi gagal
-  const invoice = {
+  // Fallback/mock data jika transaksi tidak ditemukan
+  const fallbackInvoice = {
     id: id || "INV-250408-ELKIDWAC52-26",
     transactionDate: "08-04-2025 17:00:00",
     dueDate:         "08-04-2025 17:15:00",
@@ -39,12 +42,192 @@ export default function InvoiceFailed() {
     promo:    0,
   };
 
+  // Ambil data transaksi berdasarkan ID
+  useEffect(() => {
+    const fetchTransaction = async () => {
+      try {
+        console.log('Fetching failed transaction for invoice with ID:', id);
+
+        // Ambil data transaksi dari localStorage
+        const data = getBookingById(id);
+        console.log('Failed transaction data for invoice:', data);
+
+        if (data) {
+          setTransaction(data);
+        } else {
+          console.log('Failed transaction not found, using fallback data');
+        }
+      } catch (error) {
+        console.error('Error fetching failed transaction for invoice:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransaction();
+  }, [id]);
+
+  // Konversi data transaksi ke format invoice
+  const getInvoiceData = () => {
+    if (!transaction) return fallbackInvoice;
+
+    // Format tanggal transaksi
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+    };
+
+    // Format tanggal untuk item
+    const formatDateForItem = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+    };
+
+    // Hitung harga per jam dan total jam
+    let totalHours;
+
+    // Jika ada timeSlots, gunakan panjang array sebagai jumlah jam (bukan length-1)
+    if (transaction.timeSlots && transaction.timeSlots.length > 0) {
+      totalHours = transaction.timeSlots.length;
+    } else {
+      // Jika tidak ada timeSlots, coba ekstrak dari properti time (format: "08:00 - 10:00")
+      if (transaction.time && transaction.time.includes(" - ")) {
+        const [startTime, endTime] = transaction.time.split(" - ");
+        const startHour = parseInt(startTime.split(":")[0]);
+        const endHour = parseInt(endTime.split(":")[0]);
+        totalHours = endHour - startHour;
+      } else {
+        totalHours = 1; // Default jika tidak bisa menentukan
+      }
+    }
+
+    // Hitung harga per jam
+    const pricePerHour = transaction.pricePerHour || (transaction.totalPrice / totalHours);
+
+    console.log('Failed transaction data:', {
+      totalPrice: transaction.totalPrice,
+      timeSlots: transaction.timeSlots,
+      time: transaction.time,
+      totalHours,
+      pricePerHour,
+      payment: transaction.payment
+    });
+
+    // Buat array items berdasarkan timeSlots atau time
+    const items = [];
+
+    // Jika ada timeSlots, buat item untuk setiap jam
+    if (transaction.timeSlots && transaction.timeSlots.length > 0) {
+      // Untuk setiap slot waktu yang dipilih, buat item invoice
+      for (let i = 0; i < transaction.timeSlots.length; i++) {
+        const startTime = transaction.timeSlots[i];
+        // Hitung endTime (1 jam setelah startTime)
+        const startHour = parseInt(startTime.split(":")[0]);
+        const endHour = startHour + 1;
+        const endTime = `${String(endHour).padStart(2, '0')}:00`;
+
+        items.push({
+          activity: transaction.activity || "Badminton",
+          product: transaction.courtName || "Lapangan",
+          date: formatDateForItem(transaction.date) || transaction.formattedDate?.split(', ')[1] || "Tanggal tidak tersedia",
+          time: `${startTime} - ${endTime}`,
+          price: pricePerHour,
+        });
+      }
+
+      console.log(`Created ${items.length} items for failed invoice from timeSlots`);
+    }
+    // Jika tidak ada timeSlots tapi ada time, coba ekstrak dari time
+    else if (transaction.time && transaction.time.includes(" - ")) {
+      const [startTimeStr, endTimeStr] = transaction.time.split(" - ");
+      const startHour = parseInt(startTimeStr.split(":")[0]);
+      const endHour = parseInt(endTimeStr.split(":")[0]);
+
+      // Buat item untuk setiap jam
+      for (let hour = startHour; hour < endHour; hour++) {
+        const startTime = `${String(hour).padStart(2, '0')}:00`;
+        const endTime = `${String(hour + 1).padStart(2, '0')}:00`;
+
+        items.push({
+          activity: transaction.activity || "Badminton",
+          product: transaction.courtName || "Lapangan",
+          date: formatDateForItem(transaction.date) || transaction.formattedDate?.split(', ')[1] || "Tanggal tidak tersedia",
+          time: `${startTime} - ${endTime}`,
+          price: pricePerHour,
+        });
+      }
+
+      console.log(`Created ${items.length} items for failed invoice from time string`);
+    }
+    // Fallback: Jika tidak bisa menentukan, buat 1 item
+    else {
+      items.push({
+        activity: transaction.activity || "Badminton",
+        product: transaction.courtName || "Lapangan",
+        date: formatDateForItem(transaction.date) || transaction.formattedDate?.split(', ')[1] || "Tanggal tidak tersedia",
+        time: transaction.time || "Waktu tidak tersedia",
+        price: pricePerHour,
+      });
+
+      console.log('Created 1 fallback item for failed invoice');
+    }
+
+    console.log('Failed invoice items:', items);
+
+    return {
+      id: transaction.id,
+      transactionDate: formatDate(transaction.completedAt || transaction.createdAt),
+      dueDate: formatDate(transaction.expiryTime),
+      orderStatus: "Gagal", // Selalu gagal untuk InvoiceFailed
+      paymentStatus: "Gagal", // Selalu gagal untuk InvoiceFailed
+      customer: {
+        name: transaction.user?.name || "Pengguna",
+        phone: transaction.user?.phone || "Tidak tersedia",
+      },
+      venue: {
+        name: transaction.arenaName || transaction.venueTitle,
+        address: transaction.venueSubtitle || "Alamat tidak tersedia",
+        phone: "Tidak tersedia", // Biasanya tidak ada di data transaksi
+      },
+      items: items,
+      fee: transaction.serviceFee || 5000,
+      promo: transaction.discount || 0,
+      voucherInfo: transaction.voucherTitle ? {
+        title: transaction.voucherTitle,
+        code: transaction.voucherCode
+      } : null,
+    };
+  };
+
+  // Dapatkan data invoice
+  const invoice = getInvoiceData();
+
+  // Hitung subtotal dari semua item
   const subTotal = invoice.items.reduce((sum, it) => sum + it.price, 0);
-  const total    = subTotal + invoice.fee - invoice.promo;
+  // Hitung total pembayaran
+  const total = subTotal + invoice.fee - invoice.promo;
 
-  const isSuccess = false; // karena ini versi gagal
+  console.log('Failed invoice calculations:', {
+    items: invoice.items,
+    subTotal,
+    fee: invoice.fee,
+    promo: invoice.promo,
+    total
+  });
 
+  // Selalu false karena ini versi gagal
   const handlePrint = () => window.print();
+
+  // Tampilkan loading jika data masih diambil
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] font-jakarta px-4 pt-6 pb-12 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-jakarta px-4 pt-6 pb-12">
@@ -164,8 +347,13 @@ export default function InvoiceFailed() {
             <span>Rp{invoice.fee.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span>Promo</span>
-            <span className="text-red-500">- Rp{invoice.promo.toLocaleString()}</span>
+            <span className="flex items-center gap-1">
+              {invoice.voucherInfo ? 'Voucher' : 'Promo'}
+              {invoice.voucherInfo && (
+                <span className="text-xs text-gray-500">({invoice.voucherInfo.title})</span>
+              )}
+            </span>
+            <span className="text-green-600">- Rp{invoice.promo.toLocaleString()}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Total Pembayaran</span>
