@@ -13,14 +13,20 @@ function CategoryList() {
           </h2>
 
           {/* Card Badminton */}
-          <div className="relative w-full rounded-2xl overflow-hidden">
+          <div
+            className="relative w-full rounded-2xl overflow-hidden cursor-pointer"
+            onClick={() => navigate("/arena")}
+          >
             <img
               src="/lapangan-badminton.png"
               alt="Lapangan Badminton"
               className="w-full h-[230px] object-cover"
             />
             <button
-              onClick={() => navigate("/arena")}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering parent onClick
+                navigate("/arena");
+              }}
               className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white py-2 text-sm font-semibold hover:bg-opacity-70 transition-all"
             >
               Booking Sekarang

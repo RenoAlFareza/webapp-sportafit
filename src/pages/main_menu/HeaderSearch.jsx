@@ -3,27 +3,44 @@ import { FaUserCircle } from "react-icons/fa";
 import { IoChevronDownSharp } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "../../context/LocationContext"; // ⬅️ Tambahkan ini
+import { useState } from "react";
 
 function HeaderSearch() {
   const navigate = useNavigate();
   const { location } = useLocation(); // ⬅️ Ambil lokasi dari context
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/arena?search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(location)}`);
+    }
+  };
 
   return (
     <div className="w-full max-w-[434px] bg-white font-jakarta overflow-hidden">
       {/* Search Bar dan Icon User */}
       <div className="px-4 py-5">
         <div className="flex items-center justify-between gap-4 ">
-          <div className="flex items-center flex-1 bg-gray-100 rounded-full px-4 py-2">
-            <FiSearch className="text-gray-500 mr-2" size={18} />
-            <input
-              type="text"
-              placeholder="Cari Lapangan di Sporta Fit!"
-              className="bg-transparent outline-none text-sm w-full placeholder:text-gray-400"
-            />
-          </div>
-          <FaUserCircle 
-            className="text-gray-800 cursor-pointer" 
-            size={26} 
+          <form onSubmit={handleSearch} className="flex items-center flex-1">
+            <div className="flex items-center flex-1 bg-gray-100 rounded-full px-4 py-2">
+              <FiSearch
+                className="text-gray-500 mr-2 cursor-pointer"
+                size={18}
+                onClick={handleSearch}
+              />
+              <input
+                type="text"
+                placeholder="Cari Lapangan di Sporta Fit!"
+                className="bg-transparent outline-none text-sm w-full placeholder:text-gray-400"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </form>
+          <FaUserCircle
+            className="text-gray-800 cursor-pointer"
+            size={26}
             onClick={() => navigate("/profil1")}
           />
         </div>

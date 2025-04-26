@@ -29,7 +29,10 @@ function BottomNavbar() {
 
         {/* Transactions button */}
         <button
-          onClick={() => navigate("/transaksi")}
+          onClick={() => {
+            console.log('Navigating to transactions page');
+            navigate("/transaksi");
+          }}
           className="flex flex-col items-center text-gray-600 w-full py-2"
         >
           <FaShoppingCart size={22} />

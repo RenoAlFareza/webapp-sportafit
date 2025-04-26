@@ -1,11 +1,57 @@
 // src/pages/pemesanan/LapanganBooking.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack, IoCalendarOutline } from "react-icons/io5";
-import { format, addDays, startOfToday } from "date-fns";
+import { format, addDays, startOfToday, isSameDay, parseISO } from "date-fns";
+import { ArenaService } from "../../services/apiService";
+import { saveBookingToHistory, getBookingHistory, getTransactions } from "../../services/bookingHistoryService";
 
 const DAYS_AHEAD = 30;
-const PRICE_PER_HOUR = 80000;
+// Default price per hour jika data dari API tidak tersedia
+const DEFAULT_PRICE_PER_HOUR = 80000;
+
+// Fallback data jika API gagal
+const UNAVAILABLE_SLOTS = ["01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"];
+
+// Fungsi untuk mendapatkan slot yang sudah dibooking dari booking history dan transactions
+const getBookedSlots = (selectedDate, selectedLapangan) => {
+  const formattedDate = format(selectedDate, "yyyy-MM-dd");
+  const bookedSlots = [];
+
+  // Cek di booking history
+  const bookingHistory = getBookingHistory();
+  bookingHistory.forEach(booking => {
+    // Jika tanggal dan lapangan sama
+    if (booking.date === formattedDate && booking.courtName === selectedLapangan) {
+      // Tambahkan semua time slots ke bookedSlots
+      if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
+        booking.timeSlots.forEach(slot => {
+          if (!bookedSlots.includes(slot)) {
+            bookedSlots.push(slot);
+          }
+        });
+      }
+    }
+  });
+
+  // Cek di transactions
+  const transactions = getTransactions();
+  transactions.forEach(transaction => {
+    // Jika tanggal dan lapangan sama
+    if (transaction.date === formattedDate && transaction.courtName === selectedLapangan) {
+      // Tambahkan semua time slots ke bookedSlots
+      if (transaction.timeSlots && Array.isArray(transaction.timeSlots)) {
+        transaction.timeSlots.forEach(slot => {
+          if (!bookedSlots.includes(slot)) {
+            bookedSlots.push(slot);
+          }
+        });
+      }
+    }
+  });
+
+  return bookedSlots;
+};
 
 const generateDates = () => {
   const today = startOfToday();
@@ -20,9 +66,6 @@ const generateTimes = () =>
     return `${hh}:00`;
   });
 
-const BOOKED_SLOTS = ["10:00", "16:00", "17:00", "18:00", "23:00"];
-const UNAVAILABLE_SLOTS = ["01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"];
-
 export default function LapanganBooking() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -30,15 +73,54 @@ export default function LapanganBooking() {
   const dates = generateDates();
   const times = generateTimes();
 
+  // State untuk UI
   const [selectedDate, setSelectedDate] = useState(dates[0]);
   const [showNativePicker, setShowNativePicker] = useState(false);
   const [selectedLapangan, setSelectedLapangan] = useState("Lapangan 1");
   const [selectedTimes, setSelectedTimes] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
+
+  // State untuk data dari backend
+  const [arenaData, setArenaData] = useState(null);
+  const [courtsData, setCourtsData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch arena data
+  useEffect(() => {
+    const fetchArenaData = async () => {
+      try {
+        setLoading(true);
+        const data = await ArenaService.getArenaById(id);
+        setArenaData(data);
+
+        // Fetch courts data
+        const courtsData = await ArenaService.getCourtsByArenaId(id);
+        setCourtsData(courtsData);
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching arena data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchArenaData();
+  }, [id]);
+
+  // Update booked slots when selected date or lapangan changes
+  useEffect(() => {
+    // Get booked slots for the selected date and lapangan
+    const slots = getBookedSlots(selectedDate, selectedLapangan);
+    setBookedSlots(slots);
+
+    // Clear selected times that are now booked
+    setSelectedTimes(prev => prev.filter(time => !slots.includes(time)));
+  }, [selectedDate, selectedLapangan]);
 
   const toggleNative = () => setShowNativePicker(v => !v);
 
   const onTimeClick = t => {
-    if (BOOKED_SLOTS.includes(t) || UNAVAILABLE_SLOTS.includes(t)) return;
+    if (bookedSlots.includes(t) || UNAVAILABLE_SLOTS.includes(t)) return;
     setSelectedTimes(prev =>
       prev.includes(t)
         ? prev.filter(x => x !== t)
@@ -46,7 +128,51 @@ export default function LapanganBooking() {
     );
   };
 
-  const totalPrice = selectedTimes.length * PRICE_PER_HOUR;
+  // Prepare booking data for next page
+  const handleContinue = () => {
+    // Biaya layanan tetap
+    const serviceFee = 5000;
+
+    // Prepare data to pass to payment detail page
+    const bookingData = {
+      arenaId: id,
+      arenaName: arenaData?.name || "Arena",
+      activity: arenaData?.type || "Badminton", // Gunakan tipe arena jika tersedia
+      venueTitle: arenaData?.name || "Arena",
+      venueSubtitle: `${arenaData?.name || "Arena"}, ${arenaData?.city || "Surabaya"}`,
+      courtName: selectedLapangan,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      formattedDate: format(selectedDate, "EEEE, dd MMMM yyyy"),
+      timeSlots: selectedTimes,
+      time: selectedTimes.length > 0 ?
+        `${selectedTimes[0]} - ${selectedTimes[selectedTimes.length - 1]}` :
+        "00:00 - 00:00",
+      totalPrice: totalPrice,
+      pricePerHour: pricePerHour,
+      serviceFee: serviceFee,
+      total: totalPrice + serviceFee
+    };
+
+    // Save to booking history
+    const savedBooking = saveBookingToHistory(bookingData);
+
+    // Save current booking data to localStorage for payment detail page
+    localStorage.setItem('currentBooking', JSON.stringify(savedBooking));
+
+    // Navigate to payment detail page
+    navigate(`/payment-detail/${savedBooking.id}`);
+  };
+
+  // Gunakan harga dari arenaData jika tersedia, jika tidak gunakan default
+  const pricePerHour = arenaData?.price_per_hour || DEFAULT_PRICE_PER_HOUR;
+  const totalPrice = selectedTimes.length * pricePerHour;
+
+  console.log('Price details in booking:', {
+    pricePerHour,
+    totalPrice,
+    arenaPrice: arenaData?.price_per_hour,
+    selectedTimesCount: selectedTimes.length
+  });
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-jakarta">
@@ -132,8 +258,8 @@ export default function LapanganBooking() {
         {/* Grid Jam */}
         <h3 className="text-lg font-bold mb-3">Jam</h3>
         <div className="grid grid-cols-4 gap-3">
-          {times.map(t => {
-            const booked = BOOKED_SLOTS.includes(t);
+          {generateTimes().map(t => {
+            const booked = bookedSlots.includes(t);
             const unavailable = UNAVAILABLE_SLOTS.includes(t);
             const selected = selectedTimes.includes(t);
 
@@ -157,7 +283,11 @@ export default function LapanganBooking() {
                 style={{ boxShadow: unavailable ? "none" : "0 1px 6px rgba(30,64,175,0.06)" }}
               >
                 <span className="font-semibold">{t}</span>
-                {!booked && !unavailable && <span className="text-[10px]">80K</span>}
+                {!booked && !unavailable && (
+                  <span className="text-[10px]">
+                    {(pricePerHour / 1000).toFixed(0)}K
+                  </span>
+                )}
               </button>
             );
           })}
@@ -191,8 +321,13 @@ export default function LapanganBooking() {
       {/* Fixed Bottom Button */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white shadow-xl py-4 px-4">
         <button
-          onClick={() => navigate(`/payment-detail/${id}`)}
-          className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold text-lg shadow-md active:bg-blue-600 transition"
+          onClick={handleContinue}
+          disabled={selectedTimes.length === 0}
+          className={`w-full py-3 rounded-xl font-bold text-lg shadow-md transition ${
+            selectedTimes.length === 0
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-blue-500 text-white active:bg-blue-600"
+          }`}
         >
           Lanjutkan
         </button>
