@@ -1,6 +1,7 @@
 // src/App.jsx
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Login                   from "./pages/login_section/Login";
 import Register                from "./pages/login_section/Register";
@@ -49,21 +50,73 @@ import InvoiceFailed           from "./pages/transaksi/InvoiceFailed";
 // Debug pages
 import DebugTransactions       from "./pages/debug/DebugTransactions";
 
+function ProtectedRoute({ children }) {
+  const isAuthenticated = localStorage.getItem("user");
+
+  // Tambahkan validasi lebih ketat
+  if (!isAuthenticated || isAuthenticated === 'null' || isAuthenticated === 'undefined') {
+    // Clear any potentially invalid auth data
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    return <Navigate to="/login" replace />;
+  }
+
+  try {
+    // Pastikan data user valid
+    const user = JSON.parse(isAuthenticated);
+    if (!user || !user.token) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      return <Navigate to="/login" replace />;
+    }
+  } catch (e) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
+  // Force clear localStorage if there's no valid user
+  const checkAndClearAuth = () => {
+    try {
+      // Always clear localStorage on app initialization to ensure a clean state
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    } catch (e) {
+      console.error("Error clearing localStorage:", e);
+    }
+  };
+
+  // Call this function when the component mounts
+  useEffect(() => {
+    checkAndClearAuth();
+  }, []);
+
   return (
     <Routes>
-      {/* -------- Auth & Onboarding -------- */}
-      <Route path="/"                element={<Home />} />
-      <Route path="/login"           element={<Login />} />
-      <Route path="/auth/login"      element={<AuthLogin />} />
-      <Route path="/demo-login"       element={<DemoLogin />} />
-      <Route path="/register"        element={<Register />} />
-      <Route path="/personaldata"    element={<Personaldata />} />
+      {/* Rute default untuk redirect ke login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      {/* Rute publik yang tidak memerlukan autentikasi */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/auth/login" element={<AuthLogin />} />
+      <Route path="/demo-login" element={<DemoLogin />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* Rute yang memerlukan autentikasi */}
+      <Route path="/home" element={
+        <ProtectedRoute>
+          <Home />
+        </ProtectedRoute>
+      } />
+      <Route path="/personaldata"    element={<Personaldata />} />
       <Route path="/verification"    element={<Verification />} />
       <Route path="/new-password"    element={<NewPassword />} />
       <Route path="/done"            element={<Done />} />
-      <Route path="/home"            element={<Home />} />
       <Route path="/social-auth-success" element={<SocialAuthSuccess />} />
 
       {/* -------- Main Menu -------- */}

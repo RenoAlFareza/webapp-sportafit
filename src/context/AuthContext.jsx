@@ -19,48 +19,44 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkUserLoggedIn = async () => {
       try {
+        // Reset user state to null first
+        setUser(null);
+
         // Cek apakah ada data user di localStorage
         const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
-
-        // Untuk demo, selalu pastikan ada token dummy
-        if (!token) {
-          localStorage.setItem("token", "dummy-token-123");
-        }
 
         if (storedUser) {
-          // Jika ada user di localStorage, gunakan itu
-          const userData = JSON.parse(storedUser);
+          try {
+            // Jika ada user di localStorage, gunakan itu
+            const userData = JSON.parse(storedUser);
 
-          // Pastikan user memiliki token
-          if (!userData.token) {
-            userData.token = "dummy-token-123";
-            localStorage.setItem("user", JSON.stringify(userData));
+            // Pastikan user data valid
+            if (userData && userData.token) {
+              setUser(userData);
+            } else {
+              // User data tidak valid, hapus dari localStorage
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              setUser(null);
+            }
+          } catch (parseError) {
+            // Error parsing user data, hapus dari localStorage
+            console.error("Error parsing user data:", parseError);
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+            setUser(null);
           }
-
-          setUser(userData);
-          setLoading(false);
-          return;
         } else {
-          // Jika tidak ada user di localStorage, buat user dummy
-          const dummyUser = {
-            id: "user123",
-            name: "Fajar Nugros",
-            email: "designgraphic.fernando@gmail.com",
-            phone: "0812-1130-7064",
-            token: "dummy-token-123"
-          };
-
-          localStorage.setItem("user", JSON.stringify(dummyUser));
-          localStorage.setItem("token", "dummy-token-123");
-          setUser(dummyUser);
-          setLoading(false);
-          return;
+          // Tidak ada user di localStorage
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+          setUser(null);
         }
 
         // Kode di bawah ini akan digunakan saat backend sudah siap
         /*
         // Verifikasi token dengan backend
+        const token = localStorage.getItem("token");
         if (token) {
           const response = await fetch("/api/auth/me", {
             headers: {
@@ -76,38 +72,18 @@ export function AuthProvider({ children }) {
             // Token tidak valid, hapus dari localStorage
             localStorage.removeItem("token");
             localStorage.removeItem("user");
-
-            // Buat user dummy untuk demo
-            const dummyUser = {
-              id: "user123",
-              name: "Fajar Nugros",
-              email: "designgraphic.fernando@gmail.com",
-              phone: "0812-1130-7064",
-              token: "dummy-token-123"
-            };
-
-            localStorage.setItem("user", JSON.stringify(dummyUser));
-            localStorage.setItem("token", "dummy-token-123");
-            setUser(dummyUser);
+            setUser(null);
           }
         }
         */
       } catch (err) {
         console.error("Error checking authentication:", err);
         setError(err.message);
+        setUser(null);
 
-        // Jika terjadi error, tetap buat user dummy untuk demo
-        const dummyUser = {
-          id: "user123",
-          name: "Fajar Nugros",
-          email: "designgraphic.fernando@gmail.com",
-          phone: "0812-1130-7064",
-          token: "dummy-token-123"
-        };
-
-        localStorage.setItem("user", JSON.stringify(dummyUser));
-        localStorage.setItem("token", "dummy-token-123");
-        setUser(dummyUser);
+        // Hapus data user jika terjadi error
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
       } finally {
         setLoading(false);
       }
@@ -147,10 +123,13 @@ export function AuthProvider({ children }) {
       */
 
       // Untuk demo, kita akan membuat user dummy
+      // Gunakan email sebagai basis untuk nama user
+      const userName = email ? email.split('@')[0] : "User";
+
       const dummyUser = {
         id: "user123",
-        name: "Fajar Nugros",
-        email: email || "designgraphic.fernando@gmail.com",
+        name: userName.charAt(0).toUpperCase() + userName.slice(1), // Capitalize first letter
+        email: email || "user@example.com",
         phone: "0812-1130-7064",
         token: "dummy-token-123"
       };
@@ -173,14 +152,15 @@ export function AuthProvider({ children }) {
 
   // Fungsi logout
   const logout = () => {
-    // Hapus data user dan token dari localStorage
+    // Hapus semua data auth
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    sessionStorage.clear(); // Untuk berjaga-jaga
 
     // Reset state
     setUser(null);
 
-    // Redirect ke halaman login
+    // Redirect ke login
     navigate("/login");
   };
 
@@ -190,36 +170,10 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Token tidak ditemukan");
+      // Pastikan user sudah login
+      if (!user) {
+        throw new Error("User belum login");
       }
-
-      // Untuk demo, kita akan skip bagian ini karena backend belum siap
-      /*
-      const response = await fetch("/api/users/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(userData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Update profil gagal");
-      }
-
-      // Update user di localStorage dan state
-      const updatedUser = { ...user, ...data.user };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-
-      return updatedUser;
-      */
 
       // Untuk demo, kita akan update data di localStorage saja
       const updatedUser = { ...user, ...userData };

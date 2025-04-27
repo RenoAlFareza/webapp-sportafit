@@ -120,9 +120,9 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
              "Konfirmasi PIN"}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            {step === 0 ? "Masukkan 6 digit PIN untuk konfirmasi pembayaran" : 
-             step === 1 ? "Buat PIN 6 digit untuk keamanan transaksi Anda" : 
-             "Masukkan kembali PIN yang sama untuk konfirmasi"}
+            {step === 0 ? "Masukkan 6 digit PIN untuk verifikasi pembayaran Anda" : 
+             step === 1 ? "Buat PIN 6 digit baru untuk keamanan transaksi Anda" : 
+             "Masukkan kembali PIN yang sama untuk konfirmasi identitas"}
           </p>
         </div>
         
