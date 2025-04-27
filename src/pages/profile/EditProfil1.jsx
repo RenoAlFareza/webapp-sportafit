@@ -65,10 +65,24 @@ function EditProfil1() {
               });
             } else {
               // Jika tidak ada data di localStorage, buat data dummy
+              // Coba ambil email dari localStorage jika ada
+              let email = "user@example.com";
+              try {
+                const storedEmail = localStorage.getItem("lastEmail");
+                if (storedEmail) {
+                  email = storedEmail;
+                }
+              } catch (e) {
+                console.error("Error getting email from localStorage:", e);
+              }
+
+              // Gunakan email sebagai basis untuk nama user
+              const userName = email.split('@')[0];
+
               const dummyUser = {
                 id: "user123",
-                name: "Fajar Nugros",
-                email: "designgraphic.fernando@gmail.com",
+                name: userName.charAt(0).toUpperCase() + userName.slice(1), // Capitalize first letter
+                email: email,
                 phone: "0812-1130-7064",
                 token: token
               };

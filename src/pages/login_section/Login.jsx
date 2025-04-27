@@ -1,10 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [error, setError] = useState("");
+
+  // Force clear localStorage when login page is accessed
+  useEffect(() => {
+    // Clear localStorage to ensure we start fresh
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  }, []);
+
+  // Redirect to home if user becomes authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/home");
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -13,6 +29,8 @@ function Login() {
       [name]: type === "checkbox" ? checked : value
     }));
   };
+
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,28 +43,16 @@ function Login() {
     }
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password
-        })
-      });
-      const data = await res.json();
+      // Simpan email di localStorage untuk digunakan oleh UserService
+      localStorage.setItem("lastEmail", form.email);
 
-      if (!res.ok) {
-        throw new Error(data.message || "Login gagal");
-      }
-
-      // Simpan data user (tanpa password) di localStorage
-      localStorage.setItem("user", JSON.stringify(data.user));
-      // jika ingin pakai JWT: localStorage.setItem("token", data.token);
+      // Gunakan fungsi login dari AuthContext
+      await login(form.email, form.password);
 
       // Redirect ke halaman home
       navigate("/home");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Login gagal");
     }
   };
 
