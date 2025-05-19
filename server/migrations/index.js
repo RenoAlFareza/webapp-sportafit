@@ -2,6 +2,7 @@
 const createArenaTables = require('./create_arena_tables');
 const createBookingTable = require('./create_booking_table');
 const createVouchersTable = require('./vouchers');
+const addPinColumn = require('./add_pin_column');
 
 async function runMigrations() {
   try {
@@ -11,6 +12,7 @@ async function runMigrations() {
     await createArenaTables();
     await createBookingTable();
     await createVouchersTable();
+    await addPinColumn();
 
     console.log('All migrations completed successfully.');
   } catch (error) {

@@ -7,7 +7,8 @@
     "dev": "nodemon index.js",
     "migrate:social": "node migrations/add_social_login_columns.js",
     "migrate:arena": "node migrations/create_arena_tables.js",
-    "migrate": "npm run migrate:social && npm run migrate:arena"
+    "migrate:pin": "node migrations/add_pin_column.js",
+    "migrate": "npm run migrate:social && npm run migrate:arena && npm run migrate:pin"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

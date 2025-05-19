@@ -32,7 +32,8 @@ export const UserService = {
           name: "Fajar Nugros",
           email: "designgraphic.fernando@gmail.com",
           phone: "0812-1130-7064",
-          token: token
+          token: token,
+          photoUrl: "" // Tambahkan properti photoUrl
         };
 
         localStorage.setItem("user", JSON.stringify(dummyUser));
@@ -63,7 +64,8 @@ export const UserService = {
         name: "Fajar Nugros",
         email: "designgraphic.fernando@gmail.com",
         phone: "0812-1130-7064",
-        token: "dummy-token-123"
+        token: "dummy-token-123",
+        photoUrl: "" // Tambahkan properti photoUrl
       };
 
       localStorage.setItem("user", JSON.stringify(dummyUser));
@@ -102,7 +104,8 @@ export const UserService = {
         const dummyUser = {
           id: "user123",
           ...userData,
-          token: token
+          token: token,
+          photoUrl: userData.photoUrl || "" // Pastikan photoUrl ada
         };
 
         localStorage.setItem("user", JSON.stringify(dummyUser));
@@ -143,7 +146,8 @@ export const UserService = {
           const dummyUser = {
             id: "user123",
             ...userData,
-            token: "dummy-token-123"
+            token: "dummy-token-123",
+            photoUrl: userData.photoUrl || "" // Pastikan photoUrl ada
           };
 
           localStorage.setItem("user", JSON.stringify(dummyUser));

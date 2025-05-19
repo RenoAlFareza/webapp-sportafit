@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 
-const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
+const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false, error: externalError = "", isProcessing = false }) => {
   const [pin, setPin] = useState(["", "", "", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", "", "", ""]);
-  const [error, setError] = useState("");
+  const [internalError, setInternalError] = useState("");
   const [step, setStep] = useState(isNewPin ? 1 : 0); // 0: input PIN, 1: create PIN, 2: confirm PIN
-  
+
   const inputRefs = useRef([]);
   const confirmInputRefs = useRef([]);
 
@@ -14,9 +14,9 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
     if (isOpen) {
       setPin(["", "", "", "", "", ""]);
       setConfirmPin(["", "", "", "", "", ""]);
-      setError("");
+      setInternalError("");
       setStep(isNewPin ? 1 : 0);
-      
+
       // Focus first input when modal opens
       setTimeout(() => {
         if (isNewPin) {
@@ -32,37 +32,34 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
   const handleChange = (index, value, isPinConfirm = false) => {
     // Only allow numbers
     if (value && !/^\d*$/.test(value)) return;
-    
-    // Clear error when user types
-    if (error) setError("");
-    
+
+    // Clear internal error when user types
+    if (internalError) setInternalError("");
+
     const newPin = isPinConfirm ? [...confirmPin] : [...pin];
     newPin[index] = value.slice(0, 1); // Only take first character
-    
+
     if (isPinConfirm) {
       setConfirmPin(newPin);
     } else {
       setPin(newPin);
     }
-    
+
     // Auto-focus next input
     if (value && index < 5) {
       const nextRef = isPinConfirm ? confirmInputRefs.current[index + 1] : inputRefs.current[index + 1];
       nextRef?.focus();
     }
-    
-    // Check if all digits are filled
-    if (index === 5 && value && !isPinConfirm && step === 0) {
-      // If not creating new PIN, submit immediately
-      handleSubmitPin();
-    }
+
+    // We're removing auto-submission as it's causing issues
+    // The user will need to click the Verify button instead
   };
-  
+
   // Handle backspace key
   const handleKeyDown = (index, e, isPinConfirm = false) => {
     if (e.key === "Backspace") {
       const currentPin = isPinConfirm ? confirmPin : pin;
-      
+
       // If current input is empty, focus previous input
       if (!currentPin[index] && index > 0) {
         const prevRef = isPinConfirm ? confirmInputRefs.current[index - 1] : inputRefs.current[index - 1];
@@ -70,17 +67,15 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
       }
     }
   };
-  
+
   // Handle PIN submission
   const handleSubmitPin = () => {
     const pinString = pin.join("");
-    
-    // Validate PIN
-    if (pinString.length !== 6) {
-      setError("Masukkan 6 digit PIN");
-      return;
-    }
-    
+    const isPinComplete = pinString.length === 6;
+
+    // We don't need to validate PIN length here since the button is already disabled
+    // when any of the PIN fields are empty, and each field only accepts one digit
+
     if (step === 0) {
       // Verify existing PIN
       onSubmit(pinString);
@@ -93,16 +88,16 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
     } else if (step === 2) {
       // Confirm new PIN
       const confirmPinString = confirmPin.join("");
-      
+
       if (pinString !== confirmPinString) {
-        setError("PIN tidak cocok. Silakan coba lagi.");
+        setInternalError("PIN tidak cocok. Silakan coba lagi.");
         setConfirmPin(["", "", "", "", "", ""]);
         setTimeout(() => {
           confirmInputRefs.current[0]?.focus();
         }, 100);
         return;
       }
-      
+
       // Submit new PIN
       onSubmit(pinString, true);
     }
@@ -115,17 +110,17 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
       <div className="bg-white rounded-xl w-[90%] max-w-sm p-5 shadow-lg">
         <div className="text-center mb-5">
           <h2 className="text-xl font-bold text-gray-800">
-            {step === 0 ? "Masukkan PIN" : 
-             step === 1 ? "Buat PIN Baru" : 
+            {step === 0 ? "Masukkan PIN" :
+             step === 1 ? "Buat PIN Baru" :
              "Konfirmasi PIN"}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            {step === 0 ? "Masukkan 6 digit PIN untuk konfirmasi pembayaran" : 
-             step === 1 ? "Buat PIN 6 digit untuk keamanan transaksi Anda" : 
+            {step === 0 ? "Masukkan 6 digit PIN untuk konfirmasi pembayaran" :
+             step === 1 ? "Buat PIN 6 digit untuk keamanan transaksi Anda" :
              "Masukkan kembali PIN yang sama untuk konfirmasi"}
           </p>
         </div>
-        
+
         {/* PIN Input */}
         <div className="mb-5">
           {step !== 2 ? (
@@ -161,12 +156,13 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
               ))}
             </div>
           )}
-          
-          {error && (
-            <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+
+          {/* Show external error first, then internal error */}
+          {(externalError || internalError) && (
+            <p className="text-red-500 text-sm text-center mt-2">{externalError || internalError}</p>
           )}
         </div>
-        
+
         {/* Buttons */}
         <div className="flex gap-3">
           <button
@@ -177,14 +173,22 @@ const PinModal = ({ isOpen, onClose, onSubmit, isNewPin = false }) => {
           </button>
           <button
             onClick={handleSubmitPin}
-            disabled={(step === 0 || step === 1) ? pin.some(d => d === "") : confirmPin.some(d => d === "")}
-            className={`flex-1 py-2.5 rounded-lg font-medium ${
+            disabled={
+              isProcessing ||
               ((step === 0 || step === 1) ? pin.some(d => d === "") : confirmPin.some(d => d === ""))
-                ? "bg-blue-300 text-white cursor-not-allowed"
-                : "bg-blue-600 text-white"
+            }
+            className={`flex-1 py-2.5 rounded-lg font-medium ${
+              isProcessing
+                ? "bg-blue-400 text-white cursor-wait"
+                : ((step === 0 || step === 1) ? pin.some(d => d === "") : confirmPin.some(d => d === ""))
+                  ? "bg-blue-300 text-white cursor-not-allowed"
+                  : "bg-blue-600 text-white"
             }`}
           >
-            {step === 0 ? "Verifikasi" : step === 1 ? "Lanjutkan" : "Konfirmasi"}
+            {isProcessing
+              ? "Memproses..."
+              : (step === 0 ? "Verifikasi" : step === 1 ? "Lanjutkan" : "Konfirmasi")
+            }
           </button>
         </div>
       </div>

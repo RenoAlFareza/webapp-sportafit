@@ -14,7 +14,8 @@ function EditProfil1() {
     nama: "",
     email: "",
     noHP: "",
-    tanggalLahir: ""
+    tanggalLahir: "",
+    photoUrl: ""
   });
 
   // Ambil data user saat komponen dimuat
@@ -22,71 +23,87 @@ function EditProfil1() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
+        console.log("Fetching user data for edit profile");
 
-        // Untuk demo, selalu pastikan ada token dummy
-        let token = localStorage.getItem("token");
-        if (!token) {
-          token = "dummy-token-123";
-          localStorage.setItem("token", token);
-        }
-
+        // Cek apakah ada data user di context
         if (user) {
-          // Jika ada data user di context, gunakan itu
+          console.log("Using user data from context:", user);
           setFormData({
             nama: user.name || "",
             email: user.email || "",
             noHP: user.phone || "",
-            tanggalLahir: user.birthDate || ""
+            tanggalLahir: user.birthDate || "",
+            photoUrl: user.photoUrl || ""
           });
-        } else {
-          // Jika tidak ada data user di context, coba ambil dari backend/localStorage
-          try {
-            const response = await UserService.getProfile();
-            const userData = response.user;
 
+          // Set image preview jika ada photoUrl
+          if (user.photoUrl) {
+            setImagePreview(user.photoUrl);
+          }
+          return;
+        }
+
+        // Cek apakah ada data user di localStorage
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            console.log("Using user data from localStorage:", userData);
             setFormData({
               nama: userData.name || "",
               email: userData.email || "",
               noHP: userData.phone || "",
-              tanggalLahir: userData.birthDate || ""
+              tanggalLahir: userData.birthDate || "",
+              photoUrl: userData.photoUrl || ""
             });
-          } catch (err) {
-            console.error("Error fetching user data:", err);
 
-            // Jika gagal mengambil data dari backend, coba ambil dari localStorage
-            const storedUser = localStorage.getItem("user");
-            if (storedUser) {
-              const userData = JSON.parse(storedUser);
-              setFormData({
-                nama: userData.name || "",
-                email: userData.email || "",
-                noHP: userData.phone || "",
-                tanggalLahir: userData.birthDate || ""
-              });
-            } else {
-              // Jika tidak ada data di localStorage, buat data dummy
-              const dummyUser = {
-                id: "user123",
-                name: "Fajar Nugros",
-                email: "designgraphic.fernando@gmail.com",
-                phone: "0812-1130-7064",
-                token: token
-              };
-
-              localStorage.setItem("user", JSON.stringify(dummyUser));
-
-              setFormData({
-                nama: dummyUser.name,
-                email: dummyUser.email,
-                noHP: dummyUser.phone,
-                tanggalLahir: ""
-              });
+            // Set image preview jika ada photoUrl
+            if (userData.photoUrl) {
+              setImagePreview(userData.photoUrl);
             }
+            return;
+          } catch (parseErr) {
+            console.error("Error parsing user data from localStorage:", parseErr);
           }
         }
+
+        // Jika tidak ada di context atau localStorage, coba ambil dari API
+        console.log("Fetching user data from API");
+        const response = await UserService.getProfile();
+
+        if (response && response.user) {
+          const userData = response.user;
+          console.log("User data from API:", userData);
+
+          setFormData({
+            nama: userData.name || "",
+            email: userData.email || "",
+            noHP: userData.phone || "",
+            tanggalLahir: userData.birthDate || "",
+            photoUrl: userData.photoUrl || ""
+          });
+
+          // Set image preview jika ada photoUrl
+          if (userData.photoUrl) {
+            setImagePreview(userData.photoUrl);
+          }
+
+          // Simpan data user ke localStorage untuk penggunaan berikutnya
+          localStorage.setItem("user", JSON.stringify(userData));
+        } else {
+          throw new Error("Failed to fetch user data");
+        }
       } catch (err) {
-        console.error("Error in useEffect:", err);
+        console.error("Error fetching user data:", err);
         setError("Terjadi kesalahan saat memuat data. Silakan coba lagi.");
+
+        // Jika semua metode gagal, gunakan data kosong
+        setFormData({
+          nama: "",
+          email: "",
+          noHP: "",
+          tanggalLahir: ""
+        });
       } finally {
         setLoading(false);
       }
@@ -99,6 +116,9 @@ function EditProfil1() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // State untuk menyimpan preview gambar
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Fungsi untuk menangani unggah foto profil
   const handlePhotoUpload = (e) => {
@@ -117,17 +137,28 @@ function EditProfil1() {
       return;
     }
 
-    // Untuk demo, kita hanya menampilkan nama file
-    // Di implementasi sebenarnya, file akan diunggah ke server
-    setSuccess(`Foto profil ${file.name} berhasil diunggah`);
+    // Buat URL untuk preview gambar
+    const imageUrl = URL.createObjectURL(file);
+    setImagePreview(imageUrl);
 
-    // Simulasi unggah foto ke server
-    // Dalam implementasi sebenarnya, gunakan FormData dan fetch API
+    // Untuk demo, kita akan menggunakan FileReader untuk mengonversi gambar ke base64
+    // sehingga bisa disimpan di localStorage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // Simpan base64 string ke state untuk digunakan saat submit form
+      const base64String = reader.result;
+      // Simpan base64 string ke formData
+      setFormData(prev => ({ ...prev, photoUrl: base64String }));
+      setSuccess(`Foto profil berhasil diunggah. Klik Simpan untuk menyimpan perubahan.`);
+    };
+    reader.readAsDataURL(file);
+
     console.log("Foto profil yang akan diunggah:", file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Submitting profile update form");
 
     // Reset pesan error dan success
     setError("");
@@ -154,38 +185,57 @@ function EditProfil1() {
     try {
       setLoading(true);
 
-      // Untuk demo, selalu pastikan ada token dummy
-      let token = localStorage.getItem("token");
-      if (!token) {
-        token = "dummy-token-123";
-        localStorage.setItem("token", token);
-      }
-
-      // Siapkan data untuk dikirim ke backend
+      // Siapkan data untuk update
       const userData = {
         name: formData.nama,
         email: formData.email,
         phone: formData.noHP,
         birthDate: formData.tanggalLahir,
-        token: token // Pastikan token tetap ada
+        photoUrl: formData.photoUrl
       };
 
-      // Jika terhubung ke backend, gunakan updateUserData dari AuthContext
-      if (updateUserData) {
-        try {
-          await updateUserData(userData);
-        } catch (updateErr) {
-          console.error("Error using updateUserData:", updateErr);
+      console.log("Updating user data:", userData);
 
-          // Jika gagal menggunakan updateUserData, gunakan UserService
-          await UserService.updateProfile(userData);
-        }
+      // Update data di context jika tersedia
+      if (updateUserData) {
+        console.log("Using AuthContext.updateUserData");
+        await updateUserData(userData);
       } else {
-        // Jika tidak ada updateUserData, gunakan UserService
+        console.log("Using UserService.updateProfile");
         await UserService.updateProfile(userData);
       }
 
+      // Update data di localStorage
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const currentUser = JSON.parse(storedUser);
+          const updatedUser = { ...currentUser, ...userData };
+
+          // Pastikan token tetap ada
+          if (!updatedUser.token) {
+            updatedUser.token = "dummy-token-123";
+          }
+
+          console.log("Updating localStorage with:", updatedUser);
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+        } else {
+          // Jika tidak ada user di localStorage, buat baru
+          const newUser = {
+            id: "user123",
+            ...userData,
+            token: "dummy-token-123"
+          };
+          console.log("Creating new user in localStorage:", newUser);
+          localStorage.setItem("user", JSON.stringify(newUser));
+          localStorage.setItem("token", "dummy-token-123");
+        }
+      } catch (storageErr) {
+        console.error("Error updating localStorage:", storageErr);
+      }
+
       setSuccess("Profil berhasil diperbarui");
+      console.log("Profile updated successfully");
 
       // Redirect ke halaman profil setelah 1 detik
       setTimeout(() => {
@@ -195,41 +245,44 @@ function EditProfil1() {
       console.error("Error updating profile:", err);
       setError(err.message || "Gagal memperbarui profil. Silakan coba lagi.");
 
-      // Untuk demo, tetap simpan ke localStorage meskipun terjadi error
+      // Fallback: update localStorage directly
       try {
+        console.log("Fallback: updating localStorage directly");
         const userData = {
           name: formData.nama,
           email: formData.email,
           phone: formData.noHP,
           birthDate: formData.tanggalLahir,
-          token: "dummy-token-123"
+          photoUrl: formData.photoUrl
         };
 
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const currentUser = JSON.parse(storedUser);
-          const updatedUser = { ...currentUser, ...userData };
+          const updatedUser = {
+            ...currentUser,
+            ...userData,
+            token: currentUser.token || "dummy-token-123"
+          };
           localStorage.setItem("user", JSON.stringify(updatedUser));
-
-          setSuccess("Profil berhasil diperbarui (mode demo)");
-
-          // Redirect ke halaman profil setelah 1 detik
-          setTimeout(() => {
-            navigate("/profil");
-          }, 1000);
         } else {
-          localStorage.setItem("user", JSON.stringify(userData));
+          const newUser = {
+            id: "user123",
+            ...userData,
+            token: "dummy-token-123"
+          };
+          localStorage.setItem("user", JSON.stringify(newUser));
           localStorage.setItem("token", "dummy-token-123");
-
-          setSuccess("Profil berhasil diperbarui (mode demo)");
-
-          // Redirect ke halaman profil setelah 1 detik
-          setTimeout(() => {
-            navigate("/profil");
-          }, 1000);
         }
+
+        setSuccess("Profil berhasil diperbarui (mode fallback)");
+
+        // Redirect ke halaman profil setelah 1 detik
+        setTimeout(() => {
+          navigate("/profil");
+        }, 1000);
       } catch (innerErr) {
-        console.error("Error in error handling:", innerErr);
+        console.error("Error in fallback handling:", innerErr);
       }
     } finally {
       setLoading(false);
@@ -260,10 +313,16 @@ function EditProfil1() {
           {/* Foto Profil */}
           <div className="flex flex-col items-center mb-6">
             <label htmlFor="photo-upload" className="cursor-pointer">
-              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-2 relative overflow-hidden">
-                {user && user.photoUrl ? (
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-2 relative overflow-hidden">
+                {imagePreview ? (
                   <img
-                    src={user.photoUrl}
+                    src={imagePreview}
+                    alt="Foto Profil"
+                    className="w-full h-full object-cover"
+                  />
+                ) : formData.photoUrl ? (
+                  <img
+                    src={formData.photoUrl}
                     alt="Foto Profil"
                     className="w-full h-full object-cover"
                   />

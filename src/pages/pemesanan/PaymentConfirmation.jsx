@@ -80,39 +80,63 @@ export default function KonfirmasiPembayaran() {
   });
 
   // Fungsi untuk menangani klik tombol bayar
-  const handlePayButtonClick = () => {
-    // Cek apakah pengguna sudah memiliki PIN
-    const userHasPin = hasPin();
+  const handlePayButtonClick = async () => {
+    try {
+      // Cek apakah pengguna sudah memiliki PIN
+      const userHasPin = await hasPin();
 
-    // Jika belum punya PIN, tampilkan modal untuk membuat PIN baru
-    if (!userHasPin) {
-      setIsPinNew(true);
-    } else {
-      setIsPinNew(false);
+      // Jika belum punya PIN, tampilkan modal untuk membuat PIN baru
+      if (!userHasPin) {
+        setIsPinNew(true);
+      } else {
+        setIsPinNew(false);
+      }
+
+      // Tampilkan modal PIN
+      setShowPinModal(true);
+    } catch (error) {
+      console.error("Error checking PIN:", error);
+      alert("Terjadi kesalahan saat memeriksa PIN. Silakan coba lagi.");
     }
-
-    // Tampilkan modal PIN
-    setShowPinModal(true);
   };
 
   // Fungsi untuk menangani submit PIN
-  const handlePinSubmit = (pin, isNewPin = false) => {
+  const handlePinSubmit = async (pin, isNewPin = false) => {
+    // Validasi PIN terlebih dahulu
+    if (pin.length !== 6) {
+      setPinError("PIN harus terdiri dari 6 digit");
+      return;
+    }
+
     setIsProcessing(true);
     setPinError("");
 
     try {
       // Jika membuat PIN baru
       if (isNewPin) {
-        savePin(pin);
-        processPayment();
+        console.log("Creating new PIN:", pin);
+        const success = await savePin(pin);
+        if (success) {
+          processPayment();
+        } else {
+          setPinError("Gagal menyimpan PIN. Silakan coba lagi.");
+          setIsProcessing(false);
+        }
       } else {
         // Verifikasi PIN
-        const isPinValid = verifyPin(pin);
+        console.log("Verifying PIN:", pin);
+
+        // Untuk debugging, cek PIN yang tersimpan di localStorage
+        const savedPin = localStorage.getItem('user_pin');
+        console.log("Saved PIN in localStorage:", savedPin);
+
+        const isPinValid = await verifyPin(pin);
+        console.log("PIN verification result:", isPinValid);
 
         if (isPinValid) {
           processPayment();
         } else {
-          setPinError("PIN tidak valid. Silakan coba lagi.");
+          setPinError("PIN yang Anda masukkan tidak valid. Silakan coba lagi.");
           setIsProcessing(false);
         }
       }
@@ -309,6 +333,8 @@ export default function KonfirmasiPembayaran() {
         onClose={() => setShowPinModal(false)}
         onSubmit={handlePinSubmit}
         isNewPin={isPinNew}
+        error={pinError}
+        isProcessing={isProcessing}
       />
     </div>
   );

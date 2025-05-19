@@ -27,6 +27,13 @@ const swiperStyles = `
   }
 `;
 
+// Static images for the arena - CHANGE THESE IMAGES AS NEEDED
+const arenaImages = [
+  "/foto_lapangan.png",  // Default image
+  "/foto_lapangan1.jpg", // You can change these paths to your actual image files
+  "/foto_lapangan2.jpg"  // Add more or remove images as needed
+];
+
 // Testimonials data
 const testimonials = [
   {
@@ -164,7 +171,7 @@ function DetailArena() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] px-4 pt-6 pb-36 font-jakarta">
+    <div className="min-h-screen bg-[#F9FAFB] px-4 pt-6 pb-20 font-jakarta">
       {/* Apply custom styles for Swiper */}
       <style>{swiperStyles}</style>
       {/* Header */}
@@ -176,13 +183,27 @@ function DetailArena() {
         <div className="w-6" />
       </div>
 
-      {/* Hero Image */}
-      <div className="relative h-[200px] w-full rounded-2xl overflow-hidden mb-6">
-        <img
-          src={arena?.image_url || mockArena.image_url || "/foto_lapangan.png"}
-          alt={arena?.name || mockArena.name}
-          className="w-full h-full object-cover"
-        />
+      {/* Hero Images with Horizontal Scroll */}
+      {/* To change images, edit the arenaImages array at the top of this file */}
+      <div className="mb-6">
+        <Swiper
+          modules={[Pagination]}
+          spaceBetween={10}
+          slidesPerView={1}
+          pagination={{ clickable: true }}
+          className="rounded-2xl overflow-hidden h-[200px]"
+        >
+          {/* Use static images defined at the top of the file */}
+          {arenaImages.map((imagePath, index) => (
+            <SwiperSlide key={index}>
+              <img
+                src={imagePath}
+                alt={`${arena?.name || mockArena.name} - Image ${index + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </div>
 
       {/* Section 1: Rating, Jam, Lokasi */}
@@ -251,7 +272,7 @@ function DetailArena() {
       </div>
 
       {/* Section: Ulasan Pengguna */}
-      <div className="mb-24 relative z-0">
+      <div className="mb-6 relative z-0">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Ulasan Pengguna</h2>
         <Swiper
           modules={[Autoplay, Pagination]}
@@ -262,11 +283,11 @@ function DetailArena() {
           breakpoints={{
             768: { slidesPerView: 2 },
           }}
-          className="pb-12 relative z-0"
+          className="pb-8 relative z-0"
         >
           {testimonials.map((t, i) => (
             <SwiperSlide key={i}>
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md flex flex-col justify-between h-full">
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md flex flex-col justify-between h-full">
                 {/* Rating */}
                 <div className="flex gap-1 mb-4 text-amber-500">
                   {[...Array(t.rating)].map((_, idx) => (
@@ -282,9 +303,9 @@ function DetailArena() {
                 </div>
 
                 {/* Review Text (Potong jika terlalu panjang) */}
-                <p className="text-gray-600 text-sm leading-6 mb-4 italic">
-                  {t.text.split(' ').length > 25
-                    ? t.text.split(' ').slice(0, 25).join(' ') + "..."
+                <p className="text-gray-600 text-xs leading-5 mb-3 italic">
+                  {t.text.split(' ').length > 15
+                    ? `"${t.text.split(' ').slice(0, 15).join(' ')}..."`
                     : `"${t.text}"`}
                 </p>
 
@@ -293,7 +314,7 @@ function DetailArena() {
                   <img
                     src={t.image}
                     alt={t.name}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover"
                   />
                   <div>
                     <h5 className="text-gray-900 font-semibold text-sm">{t.name}</h5>
@@ -307,7 +328,7 @@ function DetailArena() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg py-3 px-4 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg py-3 px-4 z-50 border-t border-gray-200">
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-700">
             <span className="block font-semibold">{formatPrice(arena?.price_per_hour || mockArena.price_per_hour)}</span>

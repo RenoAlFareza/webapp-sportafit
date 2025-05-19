@@ -17,26 +17,41 @@ function Profil1() {
   // Ambil data user dari backend jika belum ada di context
   useEffect(() => {
     const fetchUserData = async () => {
-      // Jika sudah ada data user di context, gunakan itu
-      if (user) {
-        setUserData(user);
-        return;
-      }
-
-      // Jika tidak ada data user di context, coba ambil dari backend
       try {
         setLoading(true);
+
+        // Cek apakah ada data user di context
+        if (user) {
+          console.log("Using user data from context:", user);
+          setUserData(user);
+          return;
+        }
+
+        // Cek apakah ada data user di localStorage
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log("Using user data from localStorage:", parsedUser);
+          setUserData(parsedUser);
+          return;
+        }
+
+        // Jika tidak ada di context atau localStorage, coba ambil dari backend
+        console.log("Fetching user data from API");
         const response = await UserService.getProfile();
-        setUserData(response.user);
+        console.log("API response:", response);
+
+        if (response && response.user) {
+          setUserData(response.user);
+
+          // Simpan data user ke localStorage untuk penggunaan berikutnya
+          localStorage.setItem("user", JSON.stringify(response.user));
+        } else {
+          throw new Error("Failed to fetch user data");
+        }
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError(err.message);
-
-        // Jika gagal mengambil data dari backend, coba ambil dari localStorage
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUserData(JSON.parse(storedUser));
-        }
       } finally {
         setLoading(false);
       }
@@ -47,7 +62,24 @@ function Profil1() {
 
   // Fungsi untuk handle logout
   const handleLogout = () => {
-    logout();
+    try {
+      // Clear user data from context
+      logout();
+
+      // Clear localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Error during logout:", err);
+
+      // Fallback: manually clear localStorage and redirect
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      navigate("/login");
+    }
   };
 
   // Fungsi untuk menangani klik pada menu
@@ -138,7 +170,17 @@ function Profil1() {
 
           {/* Info Pengguna */}
           <div className="flex items-center gap-4 px-6 py-6 border-b">
-            <FaUserCircle size={64} className="text-gray-400" />
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+              {userData && userData.photoUrl ? (
+                <img
+                  src={userData.photoUrl}
+                  alt="Foto Profil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FaUserCircle size={64} className="text-gray-400" />
+              )}
+            </div>
             <div className="flex-1">
               {loading ? (
                 <div className="animate-pulse">
@@ -146,10 +188,20 @@ function Profil1() {
                   <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
                   <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                 </div>
+              ) : error ? (
+                <div className="text-red-500 text-sm">
+                  <div>Error loading profile data</div>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="underline text-blue-500 mt-1"
+                  >
+                    Refresh
+                  </button>
+                </div>
               ) : userData ? (
                 <>
-                  <div className="text-lg font-semibold text-black">{userData.name}</div>
-                  <div className="text-sm text-black">{userData.email}</div>
+                  <div className="text-lg font-semibold text-black">{userData.name || "Nama tidak tersedia"}</div>
+                  <div className="text-sm text-black">{userData.email || "Email tidak tersedia"}</div>
                   <div className="text-sm text-black">{userData.phone || "Nomor telepon belum diatur"}</div>
                 </>
               ) : (
@@ -188,11 +240,11 @@ function Profil1() {
             ))}
           </div>
 
-          {/* Tombol Keluar */}
-          <div className="px-6 mt-6 mb-8">
+          {/* Tombol Logout */}
+          <div className="px-6 pt-4 pb-8">
             <button
               onClick={handleLogout}
-              className="w-full bg-sporta-blue text-white py-3 rounded-xl text-base font-semibold hover:bg-blue-700 transition-colors"
+              className="w-full py-3 border border-red-500 text-red-500 rounded-xl font-semibold hover:bg-red-50 transition-colors"
             >
               Keluar
             </button>

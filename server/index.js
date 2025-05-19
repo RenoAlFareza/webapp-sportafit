@@ -11,6 +11,7 @@ const socialAuthRoutes = require("./routes/socialAuthRoutes");
 const arenaRoutes = require("./routes/arenaRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const voucherRoutes = require("./routes/voucherRoutes");
+const pinRoutes = require("./routes/pinRoutes");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -81,6 +82,13 @@ app.use("/api/bookings", bookingRoutes);
 // → POST /api/vouchers/user/add
 // → POST /api/vouchers/user/use
 app.use("/api/vouchers", voucherRoutes);
+
+// Mount PIN routes
+// → GET /api/pin/check
+// → POST /api/pin/create
+// → POST /api/pin/verify
+// → PUT /api/pin/update
+app.use("/api/pin", pinRoutes);
 
 // 404 handler
 app.use((req, res) => {

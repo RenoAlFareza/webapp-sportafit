@@ -48,7 +48,8 @@ export function AuthProvider({ children }) {
             name: "Fajar Nugros",
             email: "designgraphic.fernando@gmail.com",
             phone: "0812-1130-7064",
-            token: "dummy-token-123"
+            token: "dummy-token-123",
+            photoUrl: "" // Tambahkan properti photoUrl
           };
 
           localStorage.setItem("user", JSON.stringify(dummyUser));
@@ -102,7 +103,8 @@ export function AuthProvider({ children }) {
           name: "Fajar Nugros",
           email: "designgraphic.fernando@gmail.com",
           phone: "0812-1130-7064",
-          token: "dummy-token-123"
+          token: "dummy-token-123",
+          photoUrl: "" // Tambahkan properti photoUrl
         };
 
         localStorage.setItem("user", JSON.stringify(dummyUser));
@@ -152,7 +154,8 @@ export function AuthProvider({ children }) {
         name: "Fajar Nugros",
         email: email || "designgraphic.fernando@gmail.com",
         phone: "0812-1130-7064",
-        token: "dummy-token-123"
+        token: "dummy-token-123",
+        photoUrl: "" // Tambahkan properti photoUrl
       };
 
       // Simpan user dan token di localStorage

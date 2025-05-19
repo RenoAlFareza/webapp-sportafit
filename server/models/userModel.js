@@ -30,6 +30,10 @@ const User = db.define("users", { // Nama tabel harus sesuai dengan database
     type: DataTypes.ENUM("user", "admin"),
     defaultValue: "user",
   },
+  pin: {
+    type: DataTypes.STRING,
+    allowNull: true, // PIN is optional initially
+  },
   google_id: {
     type: DataTypes.STRING,
     allowNull: true,

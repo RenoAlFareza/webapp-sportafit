@@ -59,9 +59,10 @@ async function login({ email, password }) {
       { expiresIn: "7d" }
     );
 
-    // Return user (tanpa password) + token
+    // Return user (tanpa password dan pin) + token
     const userData = user.toJSON();
     delete userData.password;
+    delete userData.pin; // Jangan kirim PIN ke client
 
     return {
       ...userData,
